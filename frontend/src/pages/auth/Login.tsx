@@ -102,22 +102,7 @@ const Login = () => {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              onClick={() => continueLocally('admin')}
-            >
-              Continue as Admin
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              onClick={() => continueLocally('receptionist')}
-            >
-              Continue as Receptionist
-            </button>
-          </div>
+         
           <p className="mt-6 text-center text-sm text-slate-600">
             Don&apos;t have an account? <Link to="/auth/register" className="text-sky-600">Register</Link>
           </p>
