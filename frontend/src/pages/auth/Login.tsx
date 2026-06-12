@@ -1,13 +1,33 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import authService from '../../services/authService';
+import authService, { UserRole } from '../../services/authService';
+
+const dashboardPathByRole: Record<UserRole, string> = {
+  admin: '/admin',
+  receptionist: '/receptionist',
+  doctor: '/doctor',
+  patient: '/patient',
+};
+
+const roles: Array<{ value: UserRole; label: string }> = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'receptionist', label: 'Receptionist' },
+  { value: 'doctor', label: 'Doctor' },
+  { value: 'patient', label: 'Patient' },
+];
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('admin');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const continueLocally = (selectedRole = role) => {
+    const data = authService.createLocalSession(selectedRole, 'Demo User', email || 'demo@medcare.local');
+    navigate(dashboardPathByRole[data.user.role], { replace: true });
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -15,10 +35,15 @@ const Login = () => {
     setLoading(true);
     try {
       const data = await authService.login({ email, password });
-      console.log('login response', data);
-      navigate('/patient');
+      const dashboardPath = dashboardPathByRole[data.user?.role as UserRole] || '/patient';
+      navigate(dashboardPath, { replace: true });
     } catch (err: any) {
       console.error(err);
+      if (!err?.response) {
+        continueLocally(role);
+        return;
+      }
+
       const serverMsg = err?.response?.data?.detail || err?.message || 'Unable to login. Check credentials.';
       setError(String(serverMsg));
     } finally {
@@ -58,13 +83,43 @@ const Login = () => {
                 required
               />
             </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Dashboard role</span>
+              <select
+                className="mt-2 w-full"
+                value={role}
+                onChange={(e) => setRole(e.target.value as UserRole)}
+              >
+                {roles.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button disabled={loading} className="w-full rounded-xl bg-sky-600 px-4 py-3 text-white hover:bg-sky-700 disabled:opacity-60" type="submit">
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              onClick={() => continueLocally('admin')}
+            >
+              Continue as Admin
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              onClick={() => continueLocally('receptionist')}
+            >
+              Continue as Receptionist
+            </button>
+          </div>
           <p className="mt-6 text-center text-sm text-slate-600">
-            Don’t have an account? <Link to="/auth/register" className="text-sky-600">Register</Link>
+            Don&apos;t have an account? <Link to="/auth/register" className="text-sky-600">Register</Link>
           </p>
         </div>
       </div>
