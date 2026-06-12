@@ -23,7 +23,8 @@ const authService = {
     return response.data;
   },
   register: async (payload: RegisterPayload) => {
-    return api.post('/auth/register/', payload);
+    const response = await api.post('/auth/register/', payload);
+    return response.data;
   },
   logout: () => {
     localStorage.removeItem(TOKEN_KEY);
