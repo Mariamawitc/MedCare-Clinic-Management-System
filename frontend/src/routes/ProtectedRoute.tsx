@@ -8,6 +8,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const { user, isAuthenticated } = useAuth();
+  const disableAuth = import.meta.env.VITE_DISABLE_AUTH === 'true';
+
+  if (disableAuth) return <>{children}</>;
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;
