@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import LandingPage from '../pages/LandingPage';
 import PatientDashboard from '../pages/patient/PatientDashboard';
 import DoctorDashboard from '../pages/doctor/DoctorDashboard';
 import ReceptionistDashboard from '../pages/receptionist/ReceptionistDashboard';
@@ -9,6 +10,7 @@ import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => (
   <Routes>
+    <Route path="" element={<LandingPage />} />
     <Route path="auth/login" element={<Login />} />
     <Route path="auth/register" element={<Register />} />
 
@@ -29,7 +31,7 @@ const AppRoutes = () => (
       element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>}
     />
 
-    <Route path="" element={<Navigate to="/auth/login" replace />} />
+    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
 
