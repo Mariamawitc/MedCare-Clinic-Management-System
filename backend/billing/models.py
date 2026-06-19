@@ -4,6 +4,7 @@ Billing app models for MedCare.
 
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.utils import timezone
 from appointments.models import Appointment
 from patients.models import Patient
 from doctors.models import Doctor
@@ -46,6 +47,10 @@ class Invoice(models.Model):
         return f"Invoice {self.invoice_number} - {self.patient.user.get_full_name()}"
     
     def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            today = timezone.now().strftime('%Y%m%d')
+            count = Invoice.objects.filter(created_at__date=timezone.now().date()).count() + 1
+            self.invoice_number = f'INV-{today}-{count:04d}'
         if not self.total_amount:
             self.total_amount = self.amount + self.tax - self.discount
         super().save(*args, **kwargs)

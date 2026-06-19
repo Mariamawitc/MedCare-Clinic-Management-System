@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsClinicalStaff, IsReceptionistOrAdmin
 from .models import Patient, MedicalHistory, LabResult
 from .serializers import (
     PatientSerializer, PatientUpdateSerializer, 
@@ -17,6 +18,23 @@ class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'my_profile':
+            return [IsAuthenticated()]
+        if self.action in ['create', 'destroy']:
+            return [IsReceptionistOrAdmin()]
+        if self.action in ['list', 'retrieve']:
+            return [IsClinicalStaff()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'role', None) == 'patient':
+            return Patient.objects.filter(user=user)
+        if getattr(user, 'role', None) in ['doctor', 'receptionist', 'admin']:
+            return Patient.objects.all()
+        return Patient.objects.none()
     
     def get_serializer_class(self):
         if self.action in ['update', 'partial_update']:
@@ -48,6 +66,9 @@ class MedicalHistoryViewSet(viewsets.ModelViewSet):
             return MedicalHistory.objects.filter(patient_id=patient_id)
         return super().get_queryset()
 
+    def perform_create(self, serializer):
+        serializer.save(patient_id=self.kwargs['patient_id'])
+
 
 class LabResultViewSet(viewsets.ModelViewSet):
     queryset = LabResult.objects.all()
@@ -59,3 +80,6 @@ class LabResultViewSet(viewsets.ModelViewSet):
         if patient_id:
             return LabResult.objects.filter(patient_id=patient_id)
         return super().get_queryset()
+
+    def perform_create(self, serializer):
+        serializer.save(patient_id=self.kwargs['patient_id'])

@@ -33,11 +33,36 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['password'] != data.pop('password_confirm'):
             raise serializers.ValidationError({'password': 'Passwords do not match'})
+        request = self.context.get('request')
+        requested_role = data.get('role', 'patient')
+        if requested_role != 'patient':
+            can_create_staff = bool(
+                request
+                and request.user
+                and request.user.is_authenticated
+                and request.user.role == 'admin'
+            )
+            if not can_create_staff:
+                raise serializers.ValidationError({'role': 'Only administrators can create staff accounts'})
         return data
     
     def create(self, validated_data):
         user = CustomUser.objects.create_user(**validated_data)
         UserProfile.objects.create(user=user)
+
+        if user.role == 'patient':
+            from patients.models import Patient
+
+            Patient.objects.create(user=user)
+        elif user.role == 'doctor':
+            from doctors.models import Doctor
+
+            Doctor.objects.create(
+                user=user,
+                license_number=f'TEMP-{user.id}',
+                specialization='general',
+            )
+
         return user
 
 

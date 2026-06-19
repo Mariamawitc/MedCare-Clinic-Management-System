@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsClinicalStaff, IsDoctorRole, IsReceptionistOrAdmin
 from .models import Appointment, AppointmentReschedule, AppointmentCancellation
 from .serializers import (
     AppointmentListSerializer, AppointmentDetailSerializer,
@@ -18,6 +19,15 @@ from .serializers import (
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['approve', 'reject']:
+            return [IsClinicalStaff()]
+        if self.action == 'mark_completed':
+            return [IsDoctorRole()]
+        if self.action == 'destroy':
+            return [IsReceptionistOrAdmin()]
+        return [IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -34,7 +44,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return Appointment.objects.filter(patient__user=user)
         elif hasattr(user, 'doctor_profile'):
             return Appointment.objects.filter(doctor__user=user)
-        elif user.role == 'receptionist':
+        elif user.role in ['receptionist', 'admin']:
             return Appointment.objects.all()
         return Appointment.objects.none()
     

@@ -5,6 +5,7 @@ Prescriptions app views.
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsDoctorRole
 from .models import Prescription, PrescriptionItem
 from .serializers import PrescriptionSerializer, PrescriptionCreateSerializer
 
@@ -12,6 +13,11 @@ from .serializers import PrescriptionSerializer, PrescriptionCreateSerializer
 class PrescriptionViewSet(viewsets.ModelViewSet):
     queryset = Prescription.objects.all()
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsDoctorRole()]
+        return [IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'create':

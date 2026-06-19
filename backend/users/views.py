@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import CustomUser
+from .permissions import IsAdminRole
 from .serializers import (
     CustomUserSerializer, UserRegistrationSerializer, 
     UserUpdateSerializer, ChangePasswordSerializer
@@ -17,6 +18,13 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'register':
+            return [AllowAny()]
+        if self.action in ['me', 'update_profile', 'change_password']:
+            return [IsAuthenticated()]
+        return [IsAdminRole()]
     
     def get_serializer_class(self):
         if self.action == 'register':

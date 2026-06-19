@@ -1,132 +1,161 @@
+import { FormEvent, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import StatCard from '../../components/ui/StatCard';
+import clinicService, { AppointmentStatus } from '../../services/clinicService';
 
-type Appointment = {
-  id: number;
-  time: string;
-  doctor: string;
-  reason: string;
-  status: 'Confirmed' | 'Pending' | 'Cancelled' | 'Completed';
+const statusStyles: Record<AppointmentStatus, string> = {
+  approved: 'bg-emerald-100 text-emerald-700',
+  pending: 'bg-amber-100 text-amber-700',
+  completed: 'bg-slate-100 text-slate-700',
+  cancelled: 'bg-rose-100 text-rose-700',
+  no_show: 'bg-rose-100 text-rose-700',
+  rescheduled: 'bg-sky-100 text-sky-700',
 };
 
-type MedicalRecord = {
-  id: number;
-  title: string;
-  date: string;
-  status: string;
-  doctor: string;
-};
+const formatMoney = (value?: string) => `$${Number(value || 0).toFixed(2)}`;
 
-const sampleAppointments: Appointment[] = [
-  { id: 1, time: '09:00 AM', doctor: 'Dr. Sarah Johnson', reason: 'Regular checkup', status: 'Confirmed' },
-  { id: 2, time: '10:30 AM', doctor: 'Dr. Michael Brown', reason: 'Follow-up', status: 'Pending' },
-  { id: 3, time: '02:00 PM', doctor: 'Dr. Alice Kim', reason: 'Lab results review', status: 'Confirmed' },
-];
+const PatientDashboard = () => {
+  const queryClient = useQueryClient();
+  const [booking, setBooking] = useState({
+    doctor: '',
+    appointment_date: '',
+    appointment_time: '',
+    appointment_type: 'consultation',
+    reason: '',
+  });
 
-const medicalRecords: MedicalRecord[] = [
-  { id: 1, title: 'Blood pressure check', date: 'Jun 3, 2026', status: 'Reviewed', doctor: 'Dr. Sarah Johnson' },
-  { id: 2, title: 'Allergy panel', date: 'May 27, 2026', status: 'Pending', doctor: 'Dr. Michael Brown' },
-  { id: 3, title: 'Vitamin D level', date: 'May 12, 2026', status: 'Reviewed', doctor: 'Dr. Alice Kim' },
-];
+  const appointmentsQuery = useQuery(['appointments'], clinicService.getAppointments);
+  const doctorsQuery = useQuery(['doctors'], clinicService.getDoctors);
+  const profileQuery = useQuery(['patient-profile'], clinicService.getPatientProfile);
+  const prescriptionsQuery = useQuery(['prescriptions'], clinicService.getPrescriptions);
+  const invoicesQuery = useQuery(['invoices'], clinicService.getInvoices);
 
-const statusStyles: Record<Appointment['status'], string> = {
-  Confirmed: 'bg-emerald-100 text-emerald-700',
-  Pending: 'bg-amber-100 text-amber-700',
-  Completed: 'bg-slate-100 text-slate-700',
-  Cancelled: 'bg-rose-100 text-rose-700',
-};
+  const createAppointment = useMutation(clinicService.createAppointment, {
+    onSuccess: () => {
+      setBooking({ doctor: '', appointment_date: '', appointment_time: '', appointment_type: 'consultation', reason: '' });
+      queryClient.invalidateQueries(['appointments']);
+    },
+  });
 
-const PatientDashboard = () => (
-  <section className="space-y-6">
-    <header className="rounded-3xl bg-white p-8 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Patient portal</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Patient Dashboard</h1>
-          <p className="mt-2 text-slate-600">Book visits, review records, and keep your care plan on track.</p>
+  const appointments = appointmentsQuery.data || [];
+  const invoices = invoicesQuery.data || [];
+  const prescriptions = prescriptionsQuery.data || [];
+  const profile = profileQuery.data;
+
+  const openBalance = useMemo(
+    () => invoices
+      .filter((invoice) => !['paid', 'cancelled'].includes(invoice.status))
+      .reduce((sum, invoice) => sum + Number(invoice.total_amount || 0), 0),
+    [invoices],
+  );
+
+  const submitBooking = (event: FormEvent) => {
+    event.preventDefault();
+    if (!booking.doctor || !booking.appointment_date || !booking.appointment_time || !booking.reason) return;
+    createAppointment.mutate({ ...booking, doctor: Number(booking.doctor) });
+  };
+
+  if (appointmentsQuery.isLoading || doctorsQuery.isLoading || profileQuery.isLoading) {
+    return <div className="rounded-2xl bg-white p-6 text-slate-600 shadow-sm">Loading patient workspace...</div>;
+  }
+
+  const hasError = appointmentsQuery.isError || doctorsQuery.isError || profileQuery.isError;
+
+  return (
+    <section className="space-y-6">
+      {hasError && (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+          Could not load all patient data. Check that the backend is running and your account has a patient profile.
         </div>
-        <button className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
-          Book appointment
-        </button>
-      </div>
-    </header>
+      )}
 
-    <div className="grid gap-6 lg:grid-cols-4">
-      <StatCard title="Upcoming visits" value={3} subtitle="This month" />
-      <StatCard title="Total visits" value={12} subtitle="Completed" />
-      <StatCard title="Balance due" value="$450" subtitle="Open" />
-      <StatCard title="Active meds" value={3} subtitle="Current" />
-    </div>
-
-    <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
+      <header className="rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">Upcoming appointments</h2>
-            <p className="mt-1 text-sm text-slate-500">Your next visit details and appointment status.</p>
+            <p className="text-sm font-medium uppercase text-sky-700">Patient portal</p>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Patient Dashboard</h1>
+            <p className="mt-2 text-slate-600">Book visits, review records, and keep your care plan on track.</p>
           </div>
-          <span className="rounded-full bg-sky-100 px-3 py-1 text-sm font-medium text-sky-700">Next visit: Jun 20</span>
+        </div>
+      </header>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Upcoming visits" value={appointments.filter((a) => ['pending', 'approved', 'rescheduled'].includes(a.status)).length} subtitle="Open" />
+        <StatCard title="Total visits" value={appointments.length} subtitle="All time" />
+        <StatCard title="Balance due" value={formatMoney(String(openBalance))} subtitle="Open" />
+        <StatCard title="Active meds" value={prescriptions.reduce((sum, item) => sum + item.items.length, 0)} subtitle="Current" />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">Book appointment</h2>
+          <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitBooking}>
+            <select className="w-full" value={booking.doctor} onChange={(event) => setBooking({ ...booking, doctor: event.target.value })}>
+              <option value="">Select doctor</option>
+              {(doctorsQuery.data || []).map((doctor) => (
+                <option key={doctor.id} value={doctor.id}>{doctor.user_name} - {doctor.specialization_display}</option>
+              ))}
+            </select>
+            <select className="w-full" value={booking.appointment_type} onChange={(event) => setBooking({ ...booking, appointment_type: event.target.value })}>
+              <option value="consultation">Consultation</option>
+              <option value="follow_up">Follow-up</option>
+              <option value="checkup">Checkup</option>
+              <option value="procedure">Procedure</option>
+            </select>
+            <input className="w-full" type="date" value={booking.appointment_date} onChange={(event) => setBooking({ ...booking, appointment_date: event.target.value })} />
+            <input className="w-full" type="time" value={booking.appointment_time} onChange={(event) => setBooking({ ...booking, appointment_time: event.target.value })} />
+            <textarea className="min-h-24 md:col-span-2" placeholder="Reason for visit" value={booking.reason} onChange={(event) => setBooking({ ...booking, reason: event.target.value })} />
+            <button className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60" disabled={createAppointment.isLoading}>
+              {createAppointment.isLoading ? 'Booking...' : 'Book appointment'}
+            </button>
+          </form>
+          {createAppointment.isError && <p className="mt-3 text-sm text-rose-600">Could not book this appointment.</p>}
         </div>
 
-        <div className="mt-6 space-y-3">
-          {sampleAppointments.map((appointment) => (
-            <div key={appointment.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">{appointment.time} · {appointment.doctor}</div>
-                <div className="mt-1 text-sm text-slate-500">{appointment.reason}</div>
-              </div>
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusStyles[appointment.status]}`}>
-                {appointment.status}
-              </span>
-            </div>
-          ))}
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">Medical summary</h2>
+          <div className="mt-4 space-y-3 text-sm text-slate-600">
+            <div>Blood type: <span className="font-medium text-slate-900">{profile?.blood_type || 'Not recorded'}</span></div>
+            <div>Allergies: <span className="font-medium text-slate-900">{profile?.allergies || 'None recorded'}</span></div>
+            <div>Conditions: <span className="font-medium text-slate-900">{profile?.chronic_conditions || 'None recorded'}</span></div>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-6">
-        <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-900">Medical summary</h2>
-          <p className="mt-3 text-slate-600">Recent lab results, diagnoses, and care notes in one place.</p>
-          <div className="mt-6 space-y-3">
-            {medicalRecords.map((record) => (
-              <div key={record.id} className="rounded-2xl border border-slate-100 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-slate-900">{record.title}</div>
-                    <div className="mt-1 text-sm text-slate-500">{record.doctor}</div>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                    {record.status}
-                  </span>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">Appointments</h2>
+          <div className="mt-5 space-y-3">
+            {appointments.map((appointment) => (
+              <div key={appointment.id} className="flex flex-col gap-3 rounded-lg border border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900">{appointment.appointment_date} at {appointment.appointment_time}</div>
+                  <div className="mt-1 text-sm text-slate-500">{appointment.doctor_name} - {appointment.reason}</div>
                 </div>
-                <div className="mt-3 text-sm text-slate-500">{record.date}</div>
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusStyles[appointment.status]}`}>
+                  {appointment.status.replace('_', ' ')}
+                </span>
               </div>
             ))}
+            {!appointments.length && <p className="text-sm text-slate-500">No appointments yet.</p>}
           </div>
         </div>
 
-        <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-900">Payment overview</h2>
-          <p className="mt-3 text-slate-600">Keep track of upcoming visits, insurance claims, and outstanding balances.</p>
-          <div className="mt-6 space-y-4 rounded-2xl bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm text-slate-500">Next due</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">$165</div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">Invoices</h2>
+          <div className="mt-5 space-y-3">
+            {invoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-lg border border-slate-100 p-4">
+                <div className="font-semibold text-slate-900">{invoice.invoice_number}</div>
+                <div className="mt-1 text-sm text-slate-500">{formatMoney(invoice.total_amount)} - {invoice.status}</div>
               </div>
-              <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">Paid</div>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm text-slate-500">Insurance claim</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">Pending review</div>
-              </div>
-              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">Pending</div>
-            </div>
+            ))}
+            {!invoices.length && <p className="text-sm text-slate-500">No invoices found.</p>}
           </div>
         </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export default PatientDashboard;

@@ -57,6 +57,19 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ['doctor', 'appointment_date', 'appointment_time', 'appointment_type', 'reason', 'notes']
+
+    def validate(self, attrs):
+        appointment = Appointment(
+            patient=self.context['request'].user.patient_profile,
+            doctor=attrs['doctor'],
+            appointment_date=attrs['appointment_date'],
+            appointment_time=attrs['appointment_time'],
+            appointment_type=attrs.get('appointment_type', 'consultation'),
+            reason=attrs['reason'],
+            notes=attrs.get('notes', ''),
+        )
+        appointment.clean()
+        return attrs
     
     def create(self, validated_data):
         validated_data['patient'] = self.context['request'].user.patient_profile

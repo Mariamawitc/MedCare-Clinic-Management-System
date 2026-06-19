@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsReceptionistOrAdmin
 from .models import Invoice, Payment, BillingRecord
 from .serializers import (
     InvoiceSerializer, InvoiceCreateSerializer, PaymentSerializer,
@@ -16,6 +17,11 @@ from .serializers import (
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.all()
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'add_payment']:
+            return [IsReceptionistOrAdmin()]
+        return [IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -28,7 +34,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             return Invoice.objects.filter(patient__user=user)
         elif hasattr(user, 'doctor_profile'):
             return Invoice.objects.filter(doctor__user=user)
-        elif user.role == 'receptionist':
+        elif user.role in ['receptionist', 'admin']:
             return Invoice.objects.all()
         return Invoice.objects.none()
     
@@ -60,6 +66,21 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsReceptionistOrAdmin()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'patient_profile'):
+            return Payment.objects.filter(invoice__patient__user=user)
+        if hasattr(user, 'doctor_profile'):
+            return Payment.objects.filter(invoice__doctor__user=user)
+        if user.role in ['receptionist', 'admin']:
+            return Payment.objects.all()
+        return Payment.objects.none()
+
 
 class BillingRecordViewSet(viewsets.ModelViewSet):
     queryset = BillingRecord.objects.all()
@@ -70,6 +91,6 @@ class BillingRecordViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if hasattr(user, 'patient_profile'):
             return BillingRecord.objects.filter(patient__user=user)
-        elif user.role == 'receptionist':
+        elif user.role in ['receptionist', 'admin']:
             return BillingRecord.objects.all()
         return BillingRecord.objects.none()

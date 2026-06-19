@@ -20,7 +20,7 @@ class DoctorAdmin(admin.ModelAdmin):
 
 @admin.register(DoctorSchedule)
 class DoctorScheduleAdmin(admin.ModelAdmin):
-    list_display = ('doctor', 'get_day_display', 'start_time', 'end_time', 'is_active')
+    list_display = ('doctor', 'get_day_of_week_display', 'start_time', 'end_time', 'is_active')
     list_filter = ('day_of_week', 'is_active')
     search_fields = ('doctor__user__email',)
 

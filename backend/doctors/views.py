@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.filters import SearchFilter, OrderingFilter
+from users.permissions import IsDoctorRole, IsReceptionistOrAdmin
 from .models import Doctor, DoctorSchedule, DoctorAvailability, DoctorReview
 from .serializers import (
     DoctorListSerializer, DoctorDetailSerializer, DoctorUpdateSerializer,
@@ -31,6 +32,12 @@ class DoctorViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
+        if self.action in ['my_profile']:
+            return [IsDoctorRole()]
+        if self.action in ['update', 'partial_update']:
+            return [IsDoctorRole()]
+        if self.action in ['create', 'destroy']:
+            return [IsReceptionistOrAdmin()]
         return super().get_permissions()
     
     @action(detail=False, methods=['get'])
@@ -72,17 +79,30 @@ class DoctorScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = DoctorScheduleSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsDoctorRole()]
+        return [IsAuthenticated()]
+
 
 class DoctorAvailabilityViewSet(viewsets.ModelViewSet):
     queryset = DoctorAvailability.objects.all()
     serializer_class = DoctorAvailabilitySerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsDoctorRole()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         doctor_id = self.kwargs.get('doctor_id')
         if doctor_id:
             return DoctorAvailability.objects.filter(doctor_id=doctor_id)
         return super().get_queryset()
+
+    def perform_create(self, serializer):
+        serializer.save(doctor_id=self.kwargs['doctor_id'])
 
 
 class DoctorReviewViewSet(viewsets.ModelViewSet):
@@ -97,4 +117,7 @@ class DoctorReviewViewSet(viewsets.ModelViewSet):
         return super().get_queryset()
     
     def perform_create(self, serializer):
-        serializer.save(patient=self.request.user.patient_profile)
+        serializer.save(
+            doctor_id=self.kwargs['doctor_id'],
+            patient=self.request.user.patient_profile,
+        )

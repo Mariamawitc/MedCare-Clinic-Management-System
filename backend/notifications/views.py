@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
 from .models import Notification, EmailLog, SMSLog, NotificationTemplate
 from .serializers import (
     NotificationSerializer, EmailLogSerializer, 
@@ -32,17 +33,17 @@ class NotificationViewSet(viewsets.ModelViewSet):
         """Mark notification as read."""
         notification = self.get_object()
         notification.is_read = True
-        notification.read_date = datetime.now()
+        notification.read_date = timezone.now()
         notification.save()
         return Response(self.get_serializer(notification).data)
     
     @action(detail=False, methods=['post'])
     def mark_all_as_read(self, request):
         """Mark all notifications as read."""
-        from datetime import datetime
         notifications = self.get_queryset().filter(is_read=False)
-        notifications.update(is_read=True, read_date=datetime.now())
-        return Response({'detail': f'{notifications.count()} notifications marked as read'})
+        count = notifications.count()
+        notifications.update(is_read=True, read_date=timezone.now())
+        return Response({'detail': f'{count} notifications marked as read'})
     
     @action(detail=False, methods=['delete'])
     def clear_all(self, request):

@@ -1,141 +1,122 @@
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import StatCard from '../../components/ui/StatCard';
+import clinicService from '../../services/clinicService';
 
-type StaffMember = {
-  name: string;
-  role: string;
-  department: string;
-  status: 'Active' | 'On leave' | 'Pending';
+const roleStyles: Record<string, string> = {
+  admin: 'bg-slate-100 text-slate-700',
+  doctor: 'bg-sky-100 text-sky-700',
+  receptionist: 'bg-amber-100 text-amber-700',
+  patient: 'bg-emerald-100 text-emerald-700',
 };
 
-type Alert = {
-  title: string;
-  detail: string;
-  tone: 'info' | 'warning' | 'success';
-};
+const AdminDashboard = () => {
+  const usersQuery = useQuery(['users'], clinicService.getUsers);
+  const appointmentsQuery = useQuery(['appointments'], clinicService.getAppointments);
+  const invoicesQuery = useQuery(['invoices'], clinicService.getInvoices);
+  const billingQuery = useQuery(['billing-records'], clinicService.getBillingRecords);
 
-const staffMembers: StaffMember[] = [
-  { name: 'Dr. Sarah Johnson', role: 'Doctor', department: 'Cardiology', status: 'Active' },
-  { name: 'Marta Collins', role: 'Receptionist', department: 'Front Desk', status: 'Active' },
-  { name: 'Dr. Michael Brown', role: 'Doctor', department: 'Pediatrics', status: 'On leave' },
-  { name: 'Amina Yusuf', role: 'Admin', department: 'Operations', status: 'Pending' },
-];
+  const users = usersQuery.data || [];
+  const appointments = appointmentsQuery.data || [];
+  const invoices = invoicesQuery.data || [];
+  const billingRecords = billingQuery.data || [];
 
-const systemAlerts: Alert[] = [
-  { title: 'Appointment load', detail: '18 bookings still need confirmation today.', tone: 'warning' },
-  { title: 'Billing sync', detail: 'Payment records were updated 12 minutes ago.', tone: 'success' },
-  { title: 'Doctor schedules', detail: 'Two doctors have open availability gaps this week.', tone: 'info' },
-];
+  const staff = useMemo(() => users.filter((user) => user.role !== 'patient'), [users]);
+  const patientCount = users.filter((user) => user.role === 'patient').length;
+  const openInvoices = invoices.filter((invoice) => !['paid', 'cancelled'].includes(invoice.status));
+  const openInvoiceTotal = openInvoices.reduce((sum, invoice) => sum + Number(invoice.total_amount || 0), 0);
 
-const reports = [
-  { name: 'Daily appointments', value: '126 visits', change: '+14%' },
-  { name: 'Revenue collected', value: '$18,420', change: '+8%' },
-  { name: 'Patient registrations', value: '34 new', change: '+21%' },
-];
+  if (usersQuery.isLoading || appointmentsQuery.isLoading) {
+    return <div className="rounded-2xl bg-white p-6 text-slate-600 shadow-sm">Loading admin dashboard...</div>;
+  }
 
-const statusStyles: Record<StaffMember['status'], string> = {
-  Active: 'bg-emerald-100 text-emerald-700',
-  'On leave': 'bg-amber-100 text-amber-700',
-  Pending: 'bg-slate-100 text-slate-700',
-};
+  return (
+    <section className="space-y-6">
+      {(usersQuery.isError || appointmentsQuery.isError) && (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+          Could not load all admin data. Make sure you are logged in as an admin.
+        </div>
+      )}
 
-const alertStyles: Record<Alert['tone'], string> = {
-  info: 'border-sky-100 bg-sky-50 text-sky-800',
-  warning: 'border-amber-100 bg-amber-50 text-amber-800',
-  success: 'border-emerald-100 bg-emerald-50 text-emerald-800',
-};
-
-const AdminDashboard = () => (
-  <section className="space-y-6">
-    <header className="rounded-2xl bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="rounded-2xl bg-white p-6 shadow-sm">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Clinic control center</p>
+          <p className="text-sm font-medium uppercase text-sky-700">Clinic control center</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900">Admin Dashboard</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
-            Monitor staff coverage, daily operations, patient flow, and clinic performance from one workspace.
+            Monitor staff coverage, daily operations, patient flow, and clinic performance.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            Export report
-          </button>
-          <button className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
-            Add staff
-          </button>
-        </div>
-      </div>
-    </header>
+      </header>
 
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard title="Total patients" value="2,846" subtitle="+34 this week" />
-      <StatCard title="Active staff" value={42} subtitle="6 departments" />
-      <StatCard title="Appointments" value={126} subtitle="Today" />
-      <StatCard title="Open invoices" value="$12.8k" subtitle="Needs review" />
-    </div>
-
-    <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">Staff management</h2>
-            <p className="mt-1 text-sm text-slate-500">Review roles, departments, and account status.</p>
-          </div>
-          <button className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200">Manage</button>
-        </div>
-
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold">Role</th>
-                <th className="px-4 py-3 font-semibold">Department</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {staffMembers.map((member) => (
-                <tr key={member.name}>
-                  <td className="px-4 py-4 font-medium text-slate-900">{member.name}</td>
-                  <td className="px-4 py-4 text-slate-600">{member.role}</td>
-                  <td className="px-4 py-4 text-slate-600">{member.department}</td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[member.status]}`}>
-                      {member.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Total patients" value={patientCount} subtitle="Registered" />
+        <StatCard title="Active staff" value={staff.filter((user) => user.is_active).length} subtitle={`${staff.length} total`} />
+        <StatCard title="Appointments" value={appointments.length} subtitle="Visible" />
+        <StatCard title="Open invoices" value={`$${openInvoiceTotal.toFixed(2)}`} subtitle={`${openInvoices.length} open`} />
       </div>
 
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">System alerts</h2>
-        <div className="mt-5 space-y-3">
-          {systemAlerts.map((alert) => (
-            <div key={alert.title} className={`rounded-lg border p-4 ${alertStyles[alert.tone]}`}>
-              <div className="font-medium">{alert.title}</div>
-              <div className="mt-1 text-sm opacity-90">{alert.detail}</div>
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Staff management</h2>
+              <p className="mt-1 text-sm text-slate-500">Review account roles and active status.</p>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
+          </div>
 
-    <div className="grid gap-6 lg:grid-cols-3">
-      {reports.map((report) => (
-        <div key={report.name} className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="text-sm text-slate-500">{report.name}</div>
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div className="text-2xl font-semibold text-slate-900">{report.value}</div>
-            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">{report.change}</span>
+          <div className="mt-6 overflow-hidden rounded-lg border border-slate-100">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Name</th>
+                  <th className="px-4 py-3 font-semibold">Role</th>
+                  <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {staff.map((member) => (
+                  <tr key={member.id}>
+                    <td className="px-4 py-4 font-medium text-slate-900">{[member.first_name, member.last_name].filter(Boolean).join(' ') || 'Unnamed user'}</td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${roleStyles[member.role] || roleStyles.admin}`}>
+                        {member.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-slate-600">{member.email}</td>
+                    <td className="px-4 py-4 text-slate-600">{member.is_active ? 'Active' : 'Inactive'}</td>
+                  </tr>
+                ))}
+                {!staff.length && (
+                  <tr>
+                    <td className="px-4 py-4 text-slate-500" colSpan={4}>No staff accounts found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      ))}
-    </div>
-  </section>
-);
+
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">Operations snapshot</h2>
+          <div className="mt-5 space-y-3">
+            <div className="rounded-lg border border-amber-100 bg-amber-50 p-4 text-amber-800">
+              <div className="font-medium">Pending appointments</div>
+              <div className="mt-1 text-sm">{appointments.filter((appointment) => appointment.status === 'pending').length} bookings need confirmation.</div>
+            </div>
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-emerald-800">
+              <div className="font-medium">Billing records</div>
+              <div className="mt-1 text-sm">{billingRecords.length} service records are available.</div>
+            </div>
+            <div className="rounded-lg border border-sky-100 bg-sky-50 p-4 text-sky-800">
+              <div className="font-medium">Completed visits</div>
+              <div className="mt-1 text-sm">{appointments.filter((appointment) => appointment.status === 'completed').length} appointments are marked complete.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 export default AdminDashboard;
