@@ -145,7 +145,7 @@ const ReceptionistDashboard = () => {
             </button>
           </form>
           {registerPatient.isError && <p className="mt-3 text-sm text-rose-600">Could not register patient.</p>}
-          {registerPatient.isSuccess && <p className="mt-3 text-sm text-emerald-700">Patient registered.</p>}
+          {registerPatient.isSuccess && <p className="mt-3 text-sm text-emerald-700">Patient registered successfully.</p>}
         </div>
       </div>
     </section>

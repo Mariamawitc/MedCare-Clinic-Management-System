@@ -6,12 +6,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import CustomUser
 from .permissions import IsAdminRole
 from .serializers import (
     CustomUserSerializer, UserRegistrationSerializer, 
-    UserUpdateSerializer, ChangePasswordSerializer
+    UserUpdateSerializer, ChangePasswordSerializer, EmailTokenObtainPairSerializer
 )
+
+
+class EmailTokenObtainPairView(TokenObtainPairView):
+    serializer_class = EmailTokenObtainPairSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):

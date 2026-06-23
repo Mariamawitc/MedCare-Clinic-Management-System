@@ -54,3 +54,21 @@ class UserRegistrationAPITests(APITestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(CustomUser.objects.filter(email='doctor@example.com').exists())
+
+    def test_email_login_returns_tokens(self):
+        CustomUser.objects.create_user(
+            email='doctor@example.com',
+            password='strongpass123',
+            first_name='Doc',
+            last_name='One',
+            role='doctor',
+        )
+
+        response = self.client.post('/api/token/', {
+            'email': 'doctor@example.com',
+            'password': 'strongpass123',
+        }, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)

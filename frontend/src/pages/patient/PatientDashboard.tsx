@@ -110,6 +110,7 @@ const PatientDashboard = () => {
             </button>
           </form>
           {createAppointment.isError && <p className="mt-3 text-sm text-rose-600">Could not book this appointment.</p>}
+          {createAppointment.isSuccess && <p className="mt-3 text-sm text-emerald-700">Appointment request submitted successfully.</p>}
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">

@@ -98,7 +98,11 @@ const clinicService = {
     reason: string;
     notes?: string;
   }) => {
-    const response = await api.post('/appointments/', payload);
+    const response = await api.post('/appointments/', {
+      ...payload,
+      appointment_time: payload.appointment_time,
+      notes: payload.notes || '',
+    });
     return response.data;
   },
   approveAppointment: async (id: number) => {
@@ -146,7 +150,10 @@ const clinicService = {
     password_confirm: string;
     role: 'patient';
   }) => {
-    const response = await api.post('/users/register/', payload);
+    const response = await api.post('/users/register/', {
+      ...payload,
+      phone_number: payload.phone_number || '',
+    });
     return response.data;
   },
 };

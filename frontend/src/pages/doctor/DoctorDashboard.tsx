@@ -94,6 +94,8 @@ const DoctorDashboard = () => {
               </div>
             ))}
             {!todayAppointments.length && <p className="text-sm text-slate-500">No appointments scheduled for today.</p>}
+            {completeAppointment.isSuccess && <p className="mt-3 text-sm text-emerald-700">Appointment marked as completed.</p>}
+            {completeAppointment.isError && <p className="mt-3 text-sm text-rose-600">Could not update this appointment.</p>}
           </div>
         </div>
 
