@@ -85,6 +85,54 @@ export type UserSummary = {
   is_active: boolean;
 };
 
+export type Patient = {
+  id: number;
+  user_name: string;
+  user_email: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  blood_type?: string;
+  allergies?: string;
+  chronic_conditions?: string;
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  medical_history: Array<{
+    id: number;
+    condition: string;
+    diagnosis_date: string;
+    description: string;
+    treatment: string;
+    status: string;
+  }>;
+  lab_results: Array<{
+    id: number;
+    test_name: string;
+    test_date: string;
+    result_description: string;
+    status: string;
+  }>;
+};
+
+export type DoctorProfile = {
+  id: number;
+  user_name: string;
+  specialization: string;
+  specialization_display: string;
+  consultation_fee: string;
+  rating: number;
+  is_available: boolean;
+};
+
+getPatients: async () => {
+  const response = await api.get('/patients/');
+  return unwrapList<Patient>(response.data);
+};
+
+getDoctorProfile: async () => {
+  const response = await api.get('/doctors/my_profile/');
+  return response.data;
+};
+
 const clinicService = {
   getAppointments: async () => {
     const response = await api.get('/appointments/');

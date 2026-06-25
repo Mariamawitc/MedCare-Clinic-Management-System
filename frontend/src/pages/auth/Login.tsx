@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import authService, { UserRole } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
+import { UserRole } from '../../services/authService';
 
 const dashboardPathByRole: Record<UserRole, string> = {
   admin: '/admin',
@@ -10,24 +11,35 @@ const dashboardPathByRole: Record<UserRole, string> = {
 };
 
 const Login = () => {
+  const [role, setRole] = useState<UserRole>('patient');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
+
+  // Load saved email from localStorage on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('lastLoginEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const data = await authService.login({ email, password });
-      const dashboardPath = dashboardPathByRole[data.user?.role as UserRole] || '/patient';
+      const loggedInUser = await login(email, password);
+      // Save email to localStorage for next login
+      localStorage.setItem('lastLoginEmail', email);
+      const dashboardPath = dashboardPathByRole[loggedInUser?.role as UserRole] || '/patient';
       navigate(dashboardPath, { replace: true });
     } catch (err: any) {
       const serverMsg = err?.response?.data?.detail || err?.message || 'Unable to login. Check credentials.';
       setError(String(serverMsg));
-    } finally {
       setLoading(false);
     }
   };
@@ -49,6 +61,19 @@ const Login = () => {
               <input type="email" className="mt-2 w-full" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
             <label className="block">
+              <span className="text-sm font-medium text-slate-700">Role</span>
+              <select
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
+                value={role}
+                onChange={(e) => setRole(e.target.value as UserRole)}
+              >
+                <option value="patient">Patient</option>
+                <option value="doctor">Doctor</option>
+                <option value="receptionist">Receptionist</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label className="block">
               <span className="text-sm font-medium text-slate-700">Password</span>
               <input type="password" className="mt-2 w-full" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </label>
@@ -58,9 +83,15 @@ const Login = () => {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-600">
-            Don&apos;t have an account? <Link to="/auth/register" className="text-sky-600">Register</Link>
-          </p>
+          {role !== 'patient' ? (
+            <p className="mt-4 text-sm text-slate-600">
+              Doctor, Receptionist, and Admin accounts are created by the clinic administrator. Do not register for these roles here.
+            </p>
+          ) : (
+            <p className="mt-6 text-center text-sm text-slate-600">
+              Don&apos;t have an account? <Link to="/auth/register" className="text-sky-600">Register</Link>
+            </p>
+          )}
         </div>
       </div>
     </div>
