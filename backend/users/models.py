@@ -15,51 +15,55 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
-        user.set_password(password)
+        if password is not None:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save(using=self._db)
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', 'admin')
         return self.create_user(email, password, **extra_fields)
 
 
 class CustomUser(AbstractUser):
     """Custom user model with email as unique identifier."""
-    
+
     ROLE_CHOICES = (
         ('patient', 'Patient'),
         ('doctor', 'Doctor'),
         ('receptionist', 'Receptionist'),
         ('admin', 'Administrator'),
     )
-    
-    username = None  # Remove username field
+
+    username = None
     email = models.EmailField(unique=True, validators=[EmailValidator()])
     phone_number = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='patient')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
-    
+
     objects = CustomUserManager()
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'User'
         verbose_name_plural = 'Users'
-    
+
     def __str__(self):
         return f"{self.get_full_name()} ({self.role})"
 
 
 class UserProfile(models.Model):
     """Extended user profile for additional information."""
-    
+
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
     bio = models.TextField(blank=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
@@ -71,10 +75,10 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'User Profile'
         verbose_name_plural = 'User Profiles'
-    
+
     def __str__(self):
         return f"Profile of {self.user.email}"

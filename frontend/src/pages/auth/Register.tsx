@@ -3,16 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 
 const Register = () => {
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      await authService.register({ fullName, email, password });
+      await authService.register({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        password,
+        password_confirm: passwordConfirm,
+      });
       navigate('/auth/login');
     } catch (err) {
       setError('Unable to register. Please try again.');
@@ -25,11 +33,20 @@ const Register = () => {
       <p className="mt-2 text-slate-600">Register to book appointments and manage your records.</p>
       <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Full name</span>
+          <span className="text-sm font-medium text-slate-700">First name</span>
           <input
             className="mt-2 w-full"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Last name</span>
+          <input
+            className="mt-2 w-full"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             required
           />
         </label>
@@ -50,6 +67,16 @@ const Register = () => {
             className="mt-2 w-full"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Confirm password</span>
+          <input
+            type="password"
+            className="mt-2 w-full"
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
             required
           />
         </label>

@@ -6,9 +6,12 @@ interface LoginPayload {
 }
 
 interface RegisterPayload {
-  fullName: string;
   email: string;
+  first_name: string;
+  last_name: string;
   password: string;
+  password_confirm: string;
+  phone_number?: string;
 }
 
 const TOKEN_KEY = 'medcare_token';
@@ -16,14 +19,25 @@ const USER_KEY = 'medcare_user';
 
 const authService = {
   login: async (payload: LoginPayload) => {
-    const response = await api.post('/auth/login/', payload);
-    const { access, user } = response.data;
+    const response = await api.post('/token/', payload);
+    const { access } = response.data;
     localStorage.setItem(TOKEN_KEY, access);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+    try {
+      const me = await api.get('/users/me/');
+      localStorage.setItem(USER_KEY, JSON.stringify(me.data));
+    } catch (error) {
+      localStorage.removeItem(USER_KEY);
+    }
+
     return response.data;
   },
   register: async (payload: RegisterPayload) => {
-    return api.post('/auth/register/', payload);
+    const safePayload = {
+      ...payload,
+      role: 'patient',
+    };
+    return api.post('/users/register/', safePayload);
   },
   logout: () => {
     localStorage.removeItem(TOKEN_KEY);
