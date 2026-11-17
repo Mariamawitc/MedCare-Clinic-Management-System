@@ -1,21 +1,60 @@
-const PatientDashboard = () => (
-  <section className="space-y-6">
-    <header className="rounded-3xl bg-white p-8 shadow-sm">
-      <h1 className="text-3xl font-semibold text-slate-900">Patient Dashboard</h1>
-      <p className="mt-2 text-slate-600">Book appointments, view your medical records, and track payments.</p>
-    </header>
+import { useState, type FormEvent } from 'react';
+import DashboardLayout, { type DashboardNavItem } from '../../components/DashboardLayout';
+import { DataTable, MetricCard, Notice, PrimaryButton, SectionHeading, SecondaryButton } from '../../components/DashboardWidgets';
 
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Upcoming appointments</h2>
-        <p className="mt-3 text-slate-600">Patients can view scheduled consultations and appointment times.</p>
-      </div>
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Medical history</h2>
-        <p className="mt-3 text-slate-600">Access your diagnoses, prescriptions, and lab results.</p>
-      </div>
-    </div>
-  </section>
-);
+const navItems: DashboardNavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: '⌂' }, { id: 'appointments', label: 'Appointments', icon: '▣' },
+  { id: 'records', label: 'Medical records', icon: '▤' }, { id: 'prescriptions', label: 'Prescriptions', icon: '⌁' },
+  { id: 'payments', label: 'Payments', icon: '$' }, { id: 'notifications', label: 'Notifications', icon: '♧' },
+  { id: 'profile', label: 'Profile', icon: '◉' }, { id: 'logout', label: 'Logout', icon: '↪' },
+];
+
+type Appointment = { date: string; time: string; doctor: string; specialty: string; status: string };
+
+const PatientDashboard = () => {
+  const [appointments, setAppointments] = useState<Appointment[]>([
+    { date: 'May 12, 2024', time: '10:30 AM', doctor: 'Dr. Sarah Johnson', specialty: 'Pediatrics', status: 'Confirmed' },
+    { date: 'May 21, 2024', time: '02:00 PM', doctor: 'Dr. John Smith', specialty: 'Cardiology', status: 'Pending' },
+  ]);
+  const [booking, setBooking] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState('');
+  const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
+  const [selectedPrescription, setSelectedPrescription] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState('Due');
+  const [notifications, setNotifications] = useState(['Appointment with Dr. Sarah Johnson confirmed.', 'Your lab results are ready to view.', 'A payment receipt is available.']);
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileName, setProfileName] = useState('Demo Patient');
+
+  const submitBooking = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setAppointments((current) => [...current, { date: String(form.get('date')), time: String(form.get('time')), doctor: String(form.get('doctor')), specialty: 'General practice', status: 'Pending' }]);
+    setBooking(false);
+    setBookingMessage('Your appointment request has been added. The clinic will confirm the time.');
+  };
+
+  const content = (activeView: string) => {
+    if (activeView === 'appointments') return <div className="space-y-5"><SectionHeading eyebrow="Your care" title="Appointments" action={<PrimaryButton onClick={() => { setBooking(!booking); setBookingMessage(''); }}>{booking ? 'Close form' : '+ Book appointment'}</PrimaryButton>} />{booking && <form onSubmit={submitBooking} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-4"><label className="text-sm font-medium text-slate-600">Doctor<select name="doctor" className="mt-2 w-full rounded-xl border-slate-200"><option>Dr. Sarah Johnson</option><option>Dr. John Smith</option><option>Dr. Michael Brown</option></select></label><label className="text-sm font-medium text-slate-600">Date<input name="date" type="date" className="mt-2 w-full rounded-xl border-slate-200" required /></label><label className="text-sm font-medium text-slate-600">Time<input name="time" type="time" className="mt-2 w-full rounded-xl border-slate-200" required /></label><div className="flex items-end"><PrimaryButton type="submit" className="w-full">Request visit</PrimaryButton></div></form>}{bookingMessage && <Notice tone="green">{bookingMessage}</Notice>}<div className="space-y-3">{appointments.map((appointment, index) => <article key={`${appointment.date}-${index}`} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div><p className="font-semibold text-slate-900">{appointment.doctor} <span className="font-normal text-slate-500">· {appointment.specialty}</span></p><p className="mt-1 text-sm text-slate-500">{appointment.date} · {appointment.time}</p></div><div className="flex items-center gap-3"><span className={`rounded-full px-3 py-1 text-xs font-semibold ${appointment.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{appointment.status}</span>{appointment.status !== 'Cancelled' && <SecondaryButton onClick={() => setAppointments((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, status: 'Cancelled' } : item))}>Cancel</SecondaryButton>}</div></article>)}</div></div>;
+
+    if (activeView === 'records') return <div><SectionHeading eyebrow="Your health" title="Medical records" /><div className="grid gap-4 md:grid-cols-2">{[{ name: 'Annual health check', date: 'Apr 18, 2024', type: 'Visit summary', detail: 'General examination was within normal range. Follow up in 12 months.' }, { name: 'Blood panel', date: 'Apr 20, 2024', type: 'Lab result', detail: 'Complete blood count and metabolic panel are ready. No urgent follow-up required.' }].map((record) => <button key={record.name} type="button" onClick={() => setSelectedRecord(selectedRecord === record.name ? null : record.name)} className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-blue-300"><span className="text-xs font-semibold uppercase tracking-wider text-blue-700">{record.type}</span><span className="mt-2 block font-semibold text-slate-900">{record.name}</span><span className="mt-1 block text-sm text-slate-500">{record.date} · Click to view</span>{selectedRecord === record.name && <span className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm leading-6 text-blue-900">{record.detail}</span>}</button>)}</div></div>;
+
+    if (activeView === 'prescriptions') return <div><SectionHeading eyebrow="Medication" title="Prescriptions" /><DataTable headers={['Medication', 'Prescribed by', 'Date', 'Status']} rows={[['Amoxicillin · 500 mg', 'Dr. Sarah Johnson', 'May 02, 2024', 'Active'], ['Vitamin D · 1000 IU', 'Dr. John Smith', 'Apr 10, 2024', 'Active']]} /><div className="mt-4 flex flex-wrap gap-3">{['Amoxicillin · 500 mg', 'Vitamin D · 1000 IU'].map((name) => <SecondaryButton key={name} onClick={() => setSelectedPrescription(selectedPrescription === name ? null : name)}>{selectedPrescription === name ? 'Hide details' : `Details: ${name}`}</SecondaryButton>)}</div>{selectedPrescription && <Notice>{selectedPrescription}: take as directed by your clinician. Contact the clinic if you have questions or a reaction.</Notice>}</div>;
+
+    if (activeView === 'payments') return <div><SectionHeading eyebrow="Billing" title="Payments & invoices" /><div className="grid gap-4 md:grid-cols-3"><MetricCard label="Outstanding balance" value={paymentStatus === 'Paid' ? '$0' : '$150'} note={paymentStatus === 'Paid' ? 'Payment recorded' : 'Invoice MC-2024-0148'} icon="$" tone="amber" /><MetricCard label="Last payment" value="$80" note="Apr 20, 2024" icon="✓" tone="green" /><MetricCard label="Payment method" value="•••• 2048" note="Visa ending in 2048" icon="▣" tone="violet" /></div><div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="font-semibold text-slate-900">Consultation invoice</p><p className="mt-1 text-sm text-slate-500">Due May 15, 2024 · $150</p></div>{paymentStatus === 'Paid' ? <Notice tone="green">Paid successfully</Notice> : <PrimaryButton onClick={() => setPaymentStatus('Paid')}>Pay $150</PrimaryButton>}</div></div></div>;
+
+    if (activeView === 'notifications') return <div><SectionHeading eyebrow="Updates" title="Notifications" action={<SecondaryButton onClick={() => setNotifications([])}>Mark all read</SecondaryButton>} />{notifications.length ? <div className="space-y-3">{notifications.map((notification, index) => <button key={`${notification}-${index}`} type="button" onClick={() => setNotifications((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="flex w-full items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm hover:bg-slate-50"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">♧</span><span><span className="block text-sm font-medium text-slate-800">{notification}</span><span className="mt-1 block text-xs text-slate-400">Click to dismiss</span></span></button>)}</div> : <Notice tone="green">You’re all caught up.</Notice>}</div>;
+
+    if (activeView === 'profile') return <div><SectionHeading eyebrow="Account" title="Your profile" />{profileEditing ? <form onSubmit={(event) => { event.preventDefault(); setProfileEditing(false); }} className="max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><label className="block text-sm font-medium text-slate-600">Full name<input value={profileName} onChange={(event) => setProfileName(event.target.value)} className="mt-2 w-full rounded-xl border-slate-200" /></label><label className="block text-sm font-medium text-slate-600">Email<input defaultValue="patient.demo@medcare.local" className="mt-2 w-full rounded-xl border-slate-200" /></label><PrimaryButton type="submit">Save profile</PrimaryButton></form> : <div className="max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xl font-semibold text-slate-900">{profileName}</p><p className="mt-2 text-sm text-slate-500">patient.demo@medcare.local</p><p className="mt-1 text-sm text-slate-500">Patient account · Member since 2024</p><SecondaryButton onClick={() => setProfileEditing(true)} className="mt-5">Edit profile</SecondaryButton></div>}</div>;
+
+    return <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
+      { label: 'Upcoming appointment', value: 'May 12', note: '10:30 AM · Dr. Johnson', icon: '▣', tone: 'blue' as const, view: 'appointments' },
+      { label: 'Total appointments', value: `${appointments.length + 10}`, note: 'This year', icon: '◷', tone: 'violet' as const, view: 'appointments' },
+      { label: 'Prescriptions', value: '2', note: 'Active medications', icon: '⌁', tone: 'green' as const, view: 'prescriptions' },
+      { label: 'Payments', value: paymentStatus === 'Paid' ? '$0' : '$150', note: paymentStatus === 'Paid' ? 'No balance due' : 'Due amount', icon: '$', tone: 'amber' as const, view: 'payments' },
+    ].map((card) => <MetricCard key={card.label} {...card} onClick={() => window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard', { detail: card.view }))} />)}</div><div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]"><section><SectionHeading title="Upcoming appointment" action={<button type="button" onClick={() => window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard', { detail: 'appointments' }))} className="text-sm font-semibold text-blue-700">View all</button>} /><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-rose-50 text-2xl text-rose-600">♙</span><div><p className="font-semibold text-slate-900">Dr. Sarah Johnson</p><p className="text-sm text-slate-500">Pediatrician</p></div></div><div className="mt-5 grid gap-2 text-sm text-slate-600 sm:grid-cols-2"><p>▣ May 12, 2024</p><p>◷ 10:30 AM – 11:00 AM</p><p className="sm:col-span-2">⌖ MedCare Clinic, Room 203</p></div><button type="button" onClick={() => setBooking(true)} className="mt-5 rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">Reschedule</button></div></section><section><SectionHeading title="Recent activity" /><div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">{['Appointment booked with Dr. Sarah Johnson', 'Payment of $80 completed', 'Prescription added to your records'].map((item, index) => <button key={item} type="button" onClick={() => window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard', { detail: ['appointments', 'payments', 'prescriptions'][index] }))} className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-slate-50"><span className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-700">{['▣', '$', '⌁'][index]}</span><span><span className="block text-sm font-medium text-slate-800">{item}</span><span className="text-xs text-slate-400">{['May 05, 2024 · 10:30 AM', 'Apr 20, 2024 · 02:15 PM', 'Apr 20, 2024 · 11:00 AM'][index]}</span></span></button>)}</div></section></div>{bookingMessage && <Notice tone="green">{bookingMessage}</Notice>}<DataTable headers={['Date', 'Doctor', 'Time', 'Status']} rows={appointments.slice(0, 3).map((appointment) => [appointment.date, appointment.doctor, appointment.time, appointment.status])} /></div>;
+  };
+
+  return <DashboardLayout role="patient" items={navItems}>{(activeView) => <>{content(activeView)}</>}</DashboardLayout>;
+};
 
 export default PatientDashboard;

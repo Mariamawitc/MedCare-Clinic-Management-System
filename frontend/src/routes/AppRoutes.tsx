@@ -6,9 +6,11 @@ import DoctorDashboard from '../pages/doctor/DoctorDashboard';
 import ReceptionistDashboard from '../pages/receptionist/ReceptionistDashboard';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import ProtectedRoute from './ProtectedRoute';
+import Home from '../pages/Home';
 
 const AppRoutes = () => (
   <Routes>
+    <Route path="/" element={<Home />} />
     <Route path="auth/login" element={<Login />} />
     <Route path="auth/register" element={<Register />} />
 

@@ -1,21 +1,66 @@
-const AdminDashboard = () => (
-  <section className="space-y-6">
-    <header className="rounded-3xl bg-white p-8 shadow-sm">
-      <h1 className="text-3xl font-semibold text-slate-900">Admin Dashboard</h1>
-      <p className="mt-2 text-slate-600">Manage users, doctors, clinic operations, and view system reports.</p>
-    </header>
+import { useState, type FormEvent } from 'react';
+import DashboardLayout, { type DashboardNavItem } from '../../components/DashboardLayout';
+import { DataTable, MetricCard, Notice, PrimaryButton, SectionHeading, SecondaryButton } from '../../components/DashboardWidgets';
 
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Clinic reports</h2>
-        <p className="mt-3 text-slate-600">Generate appointment, revenue, and performance summaries.</p>
-      </div>
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Staff management</h2>
-        <p className="mt-3 text-slate-600">Add doctors, receptionists, and administrators to the system.</p>
-      </div>
-    </div>
-  </section>
-);
+const navItems: DashboardNavItem[] = [
+  { id:'dashboard',label:'Dashboard',icon:'⌂' }, { id:'users',label:'Users',icon:'♙' },
+  { id:'doctors',label:'Doctors',icon:'✚' }, { id:'patients',label:'Patients',icon:'♧' },
+  { id:'appointments',label:'Appointments',icon:'▣' }, { id:'payments',label:'Payments',icon:'$' },
+  { id:'reports',label:'Reports',icon:'▤' }, { id:'settings',label:'Settings',icon:'⚙' },
+  { id:'profile',label:'Profile',icon:'◉' }, { id:'logout',label:'Logout',icon:'↪' },
+];
+
+type Staff = { name:string; email:string; role:string; department:string; status:string };
+
+const AdminDashboard = () => {
+  const [staff, setStaff] = useState<Staff[]>([
+    { name:'Dr. Hana Mekonnen',email:'hana@medcare.local',role:'Doctor',department:'Family medicine',status:'Active' },
+    { name:'Dr. Samuel Kebede',email:'samuel@medcare.local',role:'Doctor',department:'Internal medicine',status:'Active' },
+    { name:'Rahel Girma',email:'rahel@medcare.local',role:'Receptionist',department:'Front desk',status:'Active' },
+    { name:'Abel Tesfaye',email:'abel@medcare.local',role:'Receptionist',department:'Front desk',status:'On leave' },
+  ]);
+  const [appointments, setAppointments] = useState([['Robert Fox','Dr. James Wilson','May 07 · 10:00 AM','Completed'],['Esther Howard','Dr. Sarah Johnson','May 07 · 11:00 AM','Pending'],['Cameron Williamson','Dr. James Wilson','May 07 · 01:30 PM','Pending']]);
+  const [invoices, setInvoices] = useState([['MC-2024-0148','Marta Bekele','$150','Due'],['MC-2024-0147','Yonas Tadesse','$80','Paid'],['MC-2024-0146','Sara Alemu','$240','Due']]);
+  const [showStaffForm, setShowStaffForm] = useState(false);
+  const [staffNotice, setStaffNotice] = useState('');
+  const [report, setReport] = useState('Appointments');
+  const [maintenance, setMaintenance] = useState(false);
+  const [emailAlerts, setEmailAlerts] = useState(true);
+
+  const addStaff = (event:FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setStaff((current)=>[{name:String(data.get('name')),email:String(data.get('email')),role:String(data.get('role')),department:String(data.get('department')),status:'Active'},...current]);
+    setShowStaffForm(false);
+    setStaffNotice('Staff member added to the sample directory.');
+  };
+
+  const content = (activeView:string) => {
+    if (activeView === 'users') return <div className="space-y-4"><SectionHeading eyebrow="People & access" title="Staff management" action={<PrimaryButton onClick={()=>{setShowStaffForm(!showStaffForm);setStaffNotice('');}}>{showStaffForm?'Close form':'+ Add staff'}</PrimaryButton>}/>{staffNotice&&<Notice tone="green">{staffNotice}</Notice>}{showStaffForm&&<form onSubmit={addStaff} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-medium text-slate-600">Full name<input name="name" required placeholder="Name" className="mt-2 w-full rounded-xl border-slate-200"/></label><label className="text-sm font-medium text-slate-600">Email<input name="email" type="email" required placeholder="name@medcare.local" className="mt-2 w-full rounded-xl border-slate-200"/></label><label className="text-sm font-medium text-slate-600">Role<select name="role" className="mt-2 w-full rounded-xl border-slate-200"><option>Doctor</option><option>Receptionist</option><option>Administrator</option></select></label><label className="text-sm font-medium text-slate-600">Department<input name="department" required placeholder="Department" className="mt-2 w-full rounded-xl border-slate-200"/></label><div className="sm:col-span-2 lg:col-span-4"><PrimaryButton type="submit">Add to directory</PrimaryButton></div></form>}<DataTable headers={['Staff member','Email','Role','Department','Status']} rows={staff.map((person)=>[person.name,person.email,person.role,person.department,person.status])}/></div>;
+
+    if (activeView === 'doctors') return <div><SectionHeading eyebrow="Care team" title="Doctors"/><DataTable headers={['Doctor','Specialty','Appointments this month','Rating','Status']} rows={ [['Dr. Hana Mekonnen','Family medicine','74','4.9 / 5','Available'],['Dr. Samuel Kebede','Internal medicine','68','4.8 / 5','Available'],['Dr. Liya Worku','Neurology','59','4.7 / 5','Available']] }/></div>;
+
+    if (activeView === 'patients') return <div><SectionHeading eyebrow="Care community" title="Patients"/><div className="mb-4 grid gap-4 sm:grid-cols-3"><MetricCard label="Total patients" value="1,250" note="+12% from last month" icon="♙" tone="blue"/><MetricCard label="New this month" value="84" note="Across all specialties" icon="＋" tone="green"/><MetricCard label="Active follow-ups" value="63" note="Next 30 days" icon="◷" tone="amber"/></div><DataTable headers={['Patient','Email','Last appointment','Status']} rows={ [['Marta Bekele','marta@example.test','May 05, 2024','Active'],['Yonas Tadesse','yonas@example.test','May 03, 2024','Active'],['Sara Alemu','sara@example.test','Apr 28, 2024','Follow-up due']] }/></div>;
+
+    if (activeView === 'appointments') return <div><SectionHeading eyebrow="Clinic activity" title="Appointments"/><div className="mb-4 grid gap-4 sm:grid-cols-3"><MetricCard label="Total this month" value="320" note="+9% from last month" icon="▣" tone="blue"/><MetricCard label="Completed" value="297" note="93% completion" icon="✓" tone="green"/><MetricCard label="Pending approval" value={String(appointments.filter((row)=>row[3]==='Pending').length)} note="Needs review" icon="◷" tone="amber"/></div><div className="space-y-3">{appointments.map((row,index)=><article key={`${row[0]}-${row[2]}`} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div><p className="font-semibold text-slate-900">{row[0]} · {row[1]}</p><p className="mt-1 text-sm text-slate-500">{row[2]}</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{row[3]}</span>{row[3]==='Pending'&&<PrimaryButton onClick={()=>setAppointments((current)=>current.map((item,i)=>i===index?[item[0],item[1],item[2],'Approved']:item))}>Approve</PrimaryButton>}</div></article>)}</div></div>;
+
+    if (activeView === 'payments') return <div><SectionHeading eyebrow="Finance" title="Payments & invoices"/><div className="mb-4 grid gap-4 sm:grid-cols-3"><MetricCard label="Revenue this month" value="$12,000" note="+20% from last month" icon="$" tone="green"/><MetricCard label="Outstanding invoices" value="$730" note="5 invoices" icon="◷" tone="amber"/><MetricCard label="Transactions" value="320" note="This month" icon="▣" tone="blue"/></div><div className="space-y-3">{invoices.map((invoice,index)=><article key={invoice[0]} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div><p className="font-semibold text-slate-900">{invoice[0]} · {invoice[1]}</p><p className="mt-1 text-sm text-slate-500">{invoice[2]}</p></div>{invoice[3]==='Paid'?<Notice tone="green">Paid</Notice>:<PrimaryButton onClick={()=>setInvoices((current)=>current.map((row,i)=>i===index?[row[0],row[1],row[2],'Paid']:row))}>Record payment</PrimaryButton>}</article>)}</div></div>;
+
+    if (activeView === 'reports') return <div><SectionHeading eyebrow="Clinic analytics" title="Reports"/><div className="mb-4 flex flex-wrap gap-2">{['Appointments','Revenue','Staff performance'].map((item)=><button type="button" key={item} onClick={()=>setReport(item)} aria-pressed={report===item} className={`rounded-full px-4 py-2 text-sm font-semibold ${report===item?'bg-blue-700 text-white':'bg-white text-slate-600 hover:bg-slate-100'}`}>{item}</button>)}</div><div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="font-semibold text-slate-900">{report} overview</p><div className="mt-5 flex h-36 items-end gap-3">{[42,58,49,75,63,88,71,94,78,100,83,92].map((height,index)=><div key={index} className="flex flex-1 flex-col items-center gap-2"><div className="w-full rounded-t-lg bg-gradient-to-t from-blue-700 to-sky-400" style={{height:`${height}%`}}/><span className="text-[10px] text-slate-400">{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][index]}</span></div>)}</div></div><DataTable headers={report==='Appointments'?['Month','Booked','Completed','Cancelled']:report==='Revenue'?['Month','Consultations','Lab tests','Total']:['Team','Visits','Satisfaction','Status']} rows={report==='Appointments'?[['September','301','286','15'],['October','332','314','18'],['November','319','297','22']]:report==='Revenue'?[['September','$5,120','$2,730','$7,850'],['October','$5,480','$2,940','$8,420'],['November','$5,610','$2,920','$8,530']]:[['Doctors','201','4.8 / 5','On track'],['Reception','86','4.9 / 5','On track']]}/></div>;
+
+    if (activeView === 'settings') return <div><SectionHeading eyebrow="Workspace" title="Settings"/><div className="max-w-2xl divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">{[{label:'Maintenance mode',description:'Temporarily pause new patient bookings.',value:maintenance,set:setMaintenance},{label:'Email notifications',description:'Send appointment and billing updates.',value:emailAlerts,set:setEmailAlerts}].map((setting)=><div key={setting.label} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"><div><p className="font-semibold text-slate-900">{setting.label}</p><p className="mt-1 text-sm text-slate-500">{setting.description}</p></div><button type="button" role="switch" aria-checked={setting.value} onClick={()=>setting.set(!setting.value)} className={`relative h-7 w-12 rounded-full transition ${setting.value?'bg-blue-700':'bg-slate-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${setting.value?'left-6':'left-1'}`}/></button></div>)}</div></div>;
+
+    if (activeView === 'profile') return <div><SectionHeading eyebrow="Account" title="Administrator profile"/><div className="max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xl font-semibold text-slate-900">Clinic Administrator</p><p className="mt-1 text-sm text-slate-500">admin@medcare.local</p><p className="mt-4 text-sm text-slate-600">Full access to staff, clinic operations, and reports.</p><SecondaryButton className="mt-5" onClick={()=>setStaffNotice('Profile settings are saved locally for this demo.')}>Edit profile</SecondaryButton>{staffNotice&&<p className="mt-3 text-sm text-emerald-700">{staffNotice}</p>}</div></div>;
+
+    return <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
+      {label:'Total patients',value:'1,250',note:'+12% from last month',icon:'♙',tone:'blue' as const,view:'patients'},
+      {label:'Total doctors',value:'45',note:'+5% from last month',icon:'✚',tone:'violet' as const,view:'doctors'},
+      {label:'Appointments',value:'320',note:'+9% from last month',icon:'▣',tone:'amber' as const,view:'appointments'},
+      {label:'Revenue',value:'$12,000',note:'+20% from last month',icon:'$',tone:'green' as const,view:'payments'},
+    ].map((card)=><MetricCard key={card.label} {...card} onClick={()=>window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard',{detail:card.view}))}/>)}</div><div className="grid gap-5 xl:grid-cols-2"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading title="Appointments overview" action={<button type="button" onClick={()=>window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard',{detail:'reports'}))} className="text-sm font-semibold text-blue-700">View report →</button>}/><div className="flex h-48 items-end gap-3 border-b border-l border-slate-100 px-2 pb-2">{[35,52,46,67,58,79,63,90,73,96,81,100].map((height,index)=><div key={index} className="flex h-full flex-1 items-end"><button type="button" title={`${height} appointments`} onClick={()=>window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard',{detail:'appointments'}))} className="w-full rounded-t-md bg-gradient-to-t from-blue-700 to-sky-400 transition hover:brightness-110" style={{height:`${height}%`}}/></div>)}</div><div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>Jan</span><span>Mar</span><span>Jun</span><span>Sep</span><span>Dec</span></div></section><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading title="Revenue overview"/><div className="grid gap-4 sm:grid-cols-[140px_1fr] sm:items-center"><div className="mx-auto grid h-36 w-36 place-items-center rounded-full bg-[conic-gradient(#1d4ed8_0_48%,#38bdf8_48%_70%,#fbbf24_70%_87%,#a78bfa_87%_100%)]"><div className="grid h-24 w-24 place-items-center rounded-full bg-white text-center"><span><strong className="block text-lg text-slate-900">$12k</strong><span className="text-[10px] text-slate-500">Total revenue</span></span></div></div><div className="space-y-3">{[['Consultation','$6,000','bg-blue-700'],['Lab tests','$3,000','bg-sky-400'],['Medicines','$2,000','bg-amber-400'],['Other','$1,000','bg-violet-400']].map(([label,value,color])=><button key={label} type="button" onClick={()=>window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard',{detail:'payments'}))} className="flex w-full items-center gap-2 text-left text-sm"><span className={`h-2.5 w-2.5 rounded-full ${color}`}/><span className="flex-1 text-slate-600">{label}</span><strong className="text-slate-900">{value}</strong></button>)}</div></div></section></div><div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]"><section><SectionHeading title="Recent appointments" action={<button type="button" onClick={()=>window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard',{detail:'appointments'}))} className="text-sm font-semibold text-blue-700">View all →</button>}/><DataTable headers={['Patient','Doctor','Date & time','Status']} rows={appointments.slice(0,3)}/></section><section><SectionHeading title="Quick management"/><div className="space-y-2">{[{label:'Manage staff members',view:'users',icon:'♙'},{label:'Review clinic reports',view:'reports',icon:'▤'},{label:'Update clinic settings',view:'settings',icon:'⚙'}].map((item)=><button key={item.view} type="button" onClick={()=>window.dispatchEvent(new CustomEvent('medcare:navigate-dashboard',{detail:item.view}))} className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left font-medium text-slate-800 hover:border-blue-300 hover:shadow-sm"><span className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-700">{item.icon}</span>{item.label}<span className="ml-auto text-blue-700">→</span></button>)}</div></section></div></div>;
+  };
+
+  return <DashboardLayout role="admin" items={navItems}>{(activeView)=>content(activeView)}</DashboardLayout>;
+};
 
 export default AdminDashboard;
