@@ -19,7 +19,7 @@ Each business domain lives in its own Django app, keeping the system modular and
 
 - Frontend: React + Vite + TypeScript
 - Backend: Django + Django REST Framework
-- Database: PostgreSQL
+- Database: PostgreSQL, MySQL, or SQL Server
 - Authentication: JWT via SimpleJWT
 - API access: CORS enabled for local frontend development
 
@@ -56,7 +56,7 @@ MedCare-Clinic-Management-System/
 
 ## Technology stack
 
-- Backend: Python, Django 4+, Django REST Framework, PostgreSQL, SimpleJWT, django-cors-headers, python-dotenv
+- Backend: Python, Django, Django REST Framework, PostgreSQL/MySQL/SQL Server, SimpleJWT, django-cors-headers, python-dotenv
 - Frontend: React 18, TypeScript, Vite, Tailwind CSS, React Router, Axios
 
 ## Core business domains
@@ -174,6 +174,8 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 cp .env.example .env
+# Set DB_ENGINE and DB_* values in .env for your database.
+# SQL Server additionally requires the Microsoft ODBC Driver 18 for SQL Server.
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
@@ -196,15 +198,17 @@ App: http://localhost:5173
 Copy `backend/.env.example` to `backend/.env` and set:
 - `SECRET_KEY`
 - `DEBUG`
+- `DB_ENGINE` (`postgresql`, `mysql`, or `sqlserver`; defaults to `postgresql`)
 - `DB_NAME`
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_HOST`
-- `DB_PORT`
+- `DB_PORT` (defaults to 5432 for PostgreSQL, 3306 for MySQL, or 1433 for SQL Server)
+- `DB_DRIVER` (SQL Server only; defaults to `ODBC Driver 18 for SQL Server`)
 - `CORS_ALLOWED_ORIGINS`
 - email settings for outgoing notifications
 
-Never commit `.env`.
+Install the selected database server/driver separately. SQL Server requires the Microsoft ODBC Driver; the Python backend package is installed with `pip install -r requirements.txt`. Never commit `.env`.
 
 ## Testing
 

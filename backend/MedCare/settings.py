@@ -76,16 +76,46 @@ TEMPLATES = [
 WSGI_APPLICATION = 'MedCare.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'medcare'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+def get_database_config():
+    database_engine = os.getenv('DB_ENGINE', 'postgresql').strip().lower()
+    backends = {
+        'postgresql': ('django.db.backends.postgresql', '5432'),
+        'mysql': ('django.db.backends.mysql', '3306'),
+        'sqlserver': ('mssql', '1433'),
     }
-}
+
+    try:
+        engine, default_port = backends[database_engine]
+    except KeyError as exc:
+        supported_engines = ', '.join(backends)
+        raise ValueError(
+            f"Unsupported DB_ENGINE '{database_engine}'. "
+            f"Choose one of: {supported_engines}."
+        ) from exc
+
+    database = {
+        'ENGINE': engine,
+        'NAME': os.getenv('DB_NAME', 'medcare'),
+        'USER': os.getenv('DB_USER', 'postgres' if database_engine == 'postgresql' else ''),
+        'PASSWORD': os.getenv(
+            'DB_PASSWORD',
+            'postgres' if database_engine == 'postgresql' else '',
+        ),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', default_port),
+    }
+
+    if database_engine == 'mysql':
+        database['OPTIONS'] = {'charset': 'utf8mb4'}
+    elif database_engine == 'sqlserver':
+        database['OPTIONS'] = {
+            'driver': os.getenv('DB_DRIVER', 'ODBC Driver 18 for SQL Server'),
+        }
+
+    return {'default': database}
+
+
+DATABASES = get_database_config()
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
